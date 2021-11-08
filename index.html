@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>Twilio SMS Game!</h1>
+    <div id="app">
+        <form class="player-form" @submit.prevent="onSubmit">
+            <h3>Enter Player Info </h3>
+        
+            <label for="name"> Name: </label>
+            <input id="name" v-model="name">
+        
+            <label for="number"> Number: </label>
+            <input id="number" v-model="number">
+        
+            <input type="submit" class="button" value="Submit">
+        </form>
+        <h3>Players</h3>
+        <ol v-for="player in players"> {{player.name}} : {{player.number}} </ol>
+        <button @click="sendWelcomeMsg">Welcome Players</button>
+        <button @click="game=true"> Start Game </button>
+        <div v-for="question in questions" v-show="game">
+            <h3>{{question.question}}</h3>
+            <h4>Winner: {{question.winner}}</h4>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.10/vue.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <script>
+        const socket = io();
+
+        let vue = new Vue({
+            el: '#app',
+            data: {
+                players: [],
+                name: '',
+                number: '',
+                questions: [
+                    {
+                        question: 'what is the capital of California?',
+                        answer: 'Sacramento',
+                        winner: ''
+                    },
+                ],
+                game: false
+            },
+            methods: {
+                onSubmit() {
+                    let player = {
+                        name : this.name,
+                        number : this.number
+                    }
+                    this.addPlayer(player);
+                    this.name = '';
+                    this.number = '';
+                },
+                addPlayer(player){
+                    this.players.push(player)
+                },
+                sendWelcomeMsg(){
+                    console.log(this.players[0]);
+                    this.players.forEach(player => {
+                        axios.post('http://localhost:1337/welcome', null, { params: { 'number': player.number} })
+                        .then((res) => console.log(res)); 
+                    });
+                },
+            },
+            created() {
+                socket.on("answer-received", (winnerNumber) => {
+                    this.players.forEach(player => {
+                        if(player.number == winnerNumber){
+                            this.questions[0].winner = player.name;
+                        }
+                    });
+                });
+            },
+        })
+    </script>
+</body>
+</html>
